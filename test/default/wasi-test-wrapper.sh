@@ -6,6 +6,12 @@ if command -v wasm-opt >/dev/null; then
   wasm-opt -O4 -o "${1}.tmp" "$1" && mv -f "${1}.tmp" "$1"
 fi
 
+if [ -z "$WASI_RUNTIME" ] || [ "$WASI_RUNTIME" = "swam" ]; then
+  java -jar "$(git rev-parse --show-toplevel)"/swam/out/cli/assembly/dest/out.jar run --wasi --dir=. "$1" && exit 0
+  echo "swam failed" >&2
+  exit 1
+fi
+
 if [ -z "$WASI_RUNTIME" ] || [ "$WASI_RUNTIME" = "wavm" ]; then
   if command -v wavm >/dev/null; then
     wavm run --abi=wasi "$1" && exit 0

@@ -1,0 +1,53 @@
+name: Swam tests
+
+on:
+  push:
+    branches:
+      - master
+      - stable
+  schedule:
+    - cron: '0 0 * * MON'
+
+jobs:
+  swam:
+    strategy:
+      matrix:
+        runtime: ['swam', 'wasmer']
+      fail-fast: false
+    env:
+      WASI_RUNTIME: ${{ matrix.runtime }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-java@v1
+        with:
+          java-version: '11'
+          java-package: jdk
+          architecture: x64
+        if: matrix.runtime == 'swam'
+
+      - run: sudo apt-get install -y automake build-essential git wget
+
+      - name: Build swam
+        run: |
+          git clone --depth 1 https://github.com/satabin/swam
+          cd swam
+          ./millw cli.assembly
+        if: matrix.runtime == 'swam'
+
+      - name: Build wasmer
+        run: curl https://get.wasmer.io -sSfL | sh
+        if: matrix.runtime == 'wasmer'
+
+      - name: Get wasi-sdk
+        run: |
+          wget https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-11/wasi-sdk_11.0_amd64.deb
+          sudo dpkg -i wasi-sdk_11.0_amd64.deb
+          sudo ln -s /opt/wasi-sdk/share/*sysroot* /opt/wasi-sysroot
+
+      - name: Build & test libsodium
+        run: |
+          [[ "$WASI_RUNTIME" = "wasmer" ]] && source "$HOME"/.wasmer/wasmer.sh
+          PATH=/opt/wasi-sdk/bin:$PATH dist-build/wasm32-wasi.sh || ( cat test/default/*.log && false)
+        # TODO: artifacts
