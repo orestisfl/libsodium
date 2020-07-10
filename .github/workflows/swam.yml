@@ -31,7 +31,7 @@ jobs:
 
       - name: Build swam
         run: |
-          git clone --depth 1 https://github.com/satabin/swam
+          git clone --depth 1 --branch workaround-80 https://github.com/orestisfl/swam
           cd swam
           ./millw cli.assembly
         if: matrix.runtime == 'swam'
